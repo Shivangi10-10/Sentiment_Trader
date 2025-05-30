@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sentiment-trader
+    runtime: python
+    buildCommand: ""
+    startCommand: streamlit run main.py
+    envVars:
+      - key: OPENAI_API_KEY
+        value: your_key_here
+      - key: TWITTER_BEARER_TOKEN
+        value: your_token_here
