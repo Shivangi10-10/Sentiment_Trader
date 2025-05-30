@@ -109,8 +109,14 @@ class DataSources:
                 news_items = []
                 
                 for item in data.get('results', []):
+                    # Parse timestamp and make it timezone-naive for consistency
+                    timestamp_str = item['published_at'].replace('Z', '+00:00')
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                    if timestamp.tzinfo is not None:
+                        timestamp = timestamp.replace(tzinfo=None)
+                    
                     news_items.append({
-                        'timestamp': datetime.fromisoformat(item['published_at'].replace('Z', '+00:00')),
+                        'timestamp': timestamp,
                         'text': item['title'],
                         'source': 'CryptoPanic',
                         'url': item.get('url', ''),
