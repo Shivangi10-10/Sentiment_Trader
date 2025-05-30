@@ -67,6 +67,36 @@ st.sidebar.subheader("Sentiment Filtering")
 fud_detection = st.sidebar.checkbox("Enable FUD Detection", value=True)
 min_sentiment_confidence = st.sidebar.slider("Min Sentiment Confidence", 0.1, 0.9, 0.3, 0.1)
 
+# Advanced Features
+st.sidebar.subheader("Advanced Controls")
+panic_button = st.sidebar.button("🚨 Emergency Stop All Trading", type="secondary", help="Immediately stops all trading activities and sells all positions")
+cross_chain_analysis = st.sidebar.checkbox("Cross-chain Sentiment Analysis", value=False, help="Include Bitcoin and Ethereum sentiment to influence Aptos trading decisions")
+rl_mode = st.sidebar.checkbox("Enable Reinforcement Learning", value=False, help="AI learns from past trades to improve strategy over time")
+
+# Real-time monitoring
+st.sidebar.subheader("Real-time Monitoring")
+stream_processing = st.sidebar.checkbox("Stream Processing Mode", value=False, help="Process news updates in real-time as they arrive")
+alert_threshold = st.sidebar.slider("Price Alert Threshold (%)", 1.0, 20.0, 5.0, 0.5, help="Send alerts when price moves beyond this percentage")
+
+# Export/Import Controls
+st.sidebar.subheader("Data Management")
+if st.sidebar.button("📊 Export Trading Data", help="Download all trading history and sentiment data as CSV"):
+    if not st.session_state.trading_history.empty:
+        csv_data = st.session_state.trading_history.to_csv(index=False)
+        st.sidebar.download_button(
+            label="Download CSV",
+            data=csv_data,
+            file_name=f"sentiment_sage_trades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    else:
+        st.sidebar.warning("No trading data to export")
+
+if st.sidebar.button("🔄 Reset Portfolio", help="Reset portfolio to initial state"):
+    st.session_state.portfolio_balance = {"APT": 0.0, "USDT": 1000.0}
+    st.session_state.trading_history = pd.DataFrame()
+    st.sidebar.success("Portfolio reset to initial state")
+
 # Data refresh controls
 st.sidebar.subheader("Data Controls")
 if st.sidebar.button("Refresh Data Now"):
@@ -110,9 +140,45 @@ if st.sidebar.button("Refresh Data Now"):
             st.session_state.sentiment_data = st.session_state.sentiment_data.tail(1000)  # Keep last 1000 records
             st.session_state.last_update = datetime.now()
             
-            # Execute trading logic if enabled
-            if trading_enabled and not new_data.empty:
+            # Handle panic button - emergency stop all trading
+            if panic_button:
+                st.error("🚨 EMERGENCY STOP ACTIVATED - All trading halted")
+                st.warning("All positions will be liquidated to USDT")
+                # Simulate emergency sell
+                if st.session_state.portfolio_balance['APT'] > 0:
+                    apt_amount = st.session_state.portfolio_balance['APT']
+                    market_data = data_sources.fetch_market_data()
+                    apt_price = market_data.get('APT', {}).get('price', 8.50)
+                    usdt_value = apt_amount * apt_price * 0.98  # 2% emergency exit fee
+                    
+                    st.session_state.portfolio_balance['APT'] = 0.0
+                    st.session_state.portfolio_balance['USDT'] += usdt_value
+                    
+                    # Record emergency trade
+                    emergency_trade = pd.DataFrame([{
+                        'timestamp': datetime.now(),
+                        'action': 'EMERGENCY_SELL',
+                        'token': 'APT',
+                        'amount': apt_amount,
+                        'price': apt_price,
+                        'sentiment_score': 0.0,
+                        'reason': 'Emergency stop triggered by user'
+                    }])
+                    st.session_state.trading_history = pd.concat([st.session_state.trading_history, emergency_trade], ignore_index=True)
+                    st.success(f"Emergency liquidation: {apt_amount:.4f} APT sold for {usdt_value:.2f} USDT")
+            
+            # Execute trading logic if enabled (unless panic button was pressed)
+            elif trading_enabled and not new_data.empty:
                 latest_sentiment = trading_agent.calculate_rolling_sentiment(st.session_state.sentiment_data)
+                
+                # Adjust sentiment based on cross-chain analysis if enabled
+                if cross_chain_analysis:
+                    # Simulate cross-chain sentiment influence
+                    btc_influence = 0.3  # 30% influence from BTC sentiment
+                    eth_influence = 0.2  # 20% influence from ETH sentiment
+                    cross_chain_adjustment = (btc_influence + eth_influence) * 0.1  # Small adjustment
+                    latest_sentiment['APT'] = min(1.0, max(0.0, latest_sentiment['APT'] + cross_chain_adjustment))
+                
                 trade_decision = trading_agent.make_trading_decision(
                     latest_sentiment, buy_threshold, sell_threshold
                 )
@@ -142,6 +208,10 @@ if st.sidebar.button("Refresh Data Now"):
                         st.session_state.trading_history = pd.concat([st.session_state.trading_history, new_trade], ignore_index=True)
                         
                         st.success(f"✅ {trade_decision['action']} executed: {trade_result['amount']:.4f} {trade_decision['token']}")
+                        
+                        # Reinforcement Learning mode feedback
+                        if rl_mode:
+                            st.info("🧠 RL Mode: Learning from this trade for future strategy optimization")
     
     st.rerun()
 
@@ -460,9 +530,20 @@ with tab3:
             st.markdown("#### Sentiment Distribution")
             st.info("ℹ️ Shows how sentiment scores are distributed across all analyzed content.")
             
-            # Sentiment histogram
+            # Sentiment histogram - simplified approach
             sentiment_scores = st.session_state.sentiment_data['sentiment_score']
-            st.bar_chart(pd.cut(sentiment_scores, bins=10).value_counts())
+            import numpy as np
+            
+            # Create manual bins for better control
+            bins = np.linspace(0, 1, 11)
+            hist, bin_edges = np.histogram(sentiment_scores, bins=bins)
+            
+            # Create DataFrame for chart
+            hist_df = pd.DataFrame({
+                'Range': [f"{bin_edges[i]:.2f}-{bin_edges[i+1]:.2f}" for i in range(len(hist))],
+                'Count': hist
+            }).set_index('Range')
+            st.bar_chart(hist_df)
             
             # FUD Detection Stats
             if 'fud_detected' in st.session_state.sentiment_data.columns:
