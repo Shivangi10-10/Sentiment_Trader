@@ -178,8 +178,8 @@ with tab1:
     with col4:
         st.metric("Total Trades", len(st.session_state.trading_history))
 
-# Portfolio overview
-st.subheader("💰 Portfolio Balance")
+    # Portfolio overview
+    st.subheader("💰 Portfolio Balance")
 portfolio_cols = st.columns(3)
 
 with portfolio_cols[0]:

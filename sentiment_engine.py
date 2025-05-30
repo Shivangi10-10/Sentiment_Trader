@@ -1,7 +1,7 @@
 import os
 import logging
 import re
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 class SentimentEngine:
     """
