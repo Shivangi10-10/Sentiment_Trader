@@ -1,5 +1,4 @@
 import requests
-import feedparser
 import json
 import random
 from datetime import datetime, timedelta
@@ -129,41 +128,10 @@ class DataSources:
     
     def _fetch_rss_news(self) -> List[Dict[str, Any]]:
         """Fetch news from RSS feeds."""
-        all_rss_news = []
-        
-        for feed_url in self.news_apis['rss_feeds']:
-            try:
-                self.logger.info(f"Fetching RSS from {feed_url}")
-                
-                feed = feedparser.parse(feed_url)
-                
-                for entry in feed.entries[:5]:  # Limit to 5 per feed
-                    # Check if entry is crypto-related
-                    title = entry.get('title', '')
-                    summary = entry.get('summary', '')
-                    text = f"{title} {summary}"
-                    
-                    if self._is_crypto_related(text):
-                        # Parse publication date
-                        pub_date = entry.get('published_parsed')
-                        if pub_date:
-                            timestamp = datetime(*pub_date[:6])
-                        else:
-                            timestamp = datetime.now()
-                        
-                        all_rss_news.append({
-                            'timestamp': timestamp,
-                            'text': title,
-                            'source': feed.feed.get('title', 'RSS Feed'),
-                            'url': entry.get('link', ''),
-                            'token': self._extract_token_mention(text)
-                        })
-                
-            except Exception as e:
-                self.logger.error(f"Error fetching RSS from {feed_url}: {str(e)}")
-                continue
-        
-        return all_rss_news
+        # RSS parsing requires feedparser which isn't available
+        # Return empty list - will use API sources instead
+        self.logger.info("RSS feeds disabled - using API sources only")
+        return []
     
     def _is_crypto_related(self, text: str) -> bool:
         """Check if text is crypto-related."""

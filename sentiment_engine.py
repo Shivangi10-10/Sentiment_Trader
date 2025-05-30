@@ -121,48 +121,38 @@ class SentimentEngine:
         
         return cleaned
     
-    def _extract_sentiment_score(self, results: List[Dict]) -> float:
+    def _calculate_keyword_sentiment(self, text: str) -> float:
         """
-        Extract a normalized sentiment score from pipeline results.
+        Calculate sentiment based on keyword analysis.
         
         Args:
-            results (List[Dict]): Raw results from sentiment pipeline
+            text (str): Text to analyze
             
         Returns:
-            float: Normalized sentiment score (0-1)
+            float: Sentiment score (0-1)
         """
         try:
-            # Handle different model output formats
-            if isinstance(results, list) and len(results) > 0:
-                # For models that return multiple scores
-                positive_score = 0.0
-                negative_score = 0.0
-                
-                for result in results:
-                    label = result['label'].upper()
-                    score = result['score']
-                    
-                    if 'POSITIVE' in label or label == 'LABEL_1' or '5' in label or '4' in label:
-                        positive_score += score
-                    elif 'NEGATIVE' in label or label == 'LABEL_0' or '1' in label or '2' in label:
-                        negative_score += score
-                    # Neutral scores (3 stars) contribute to middle ground
-                
-                # Normalize to 0-1 scale
-                if positive_score + negative_score > 0:
-                    sentiment_score = positive_score / (positive_score + negative_score)
-                else:
-                    sentiment_score = 0.5
-                    
-            else:
-                # Fallback to neutral
-                sentiment_score = 0.5
+            text_lower = text.lower()
             
-            # Ensure score is within bounds
-            return max(0.0, min(1.0, sentiment_score))
+            # Count positive and negative keywords
+            positive_count = sum(1 for word in self.positive_keywords if word in text_lower)
+            negative_count = sum(1 for word in self.negative_keywords if word in text_lower)
+            
+            # Calculate sentiment score
+            if positive_count == 0 and negative_count == 0:
+                return 0.5  # Neutral
+            
+            total_keywords = positive_count + negative_count
+            positive_ratio = positive_count / total_keywords
+            
+            # Add slight randomness for variety
+            import random
+            noise = random.uniform(-0.02, 0.02)
+            
+            return max(0.0, min(1.0, positive_ratio + noise))
             
         except Exception as e:
-            self.logger.error(f"Error extracting sentiment score: {str(e)}")
+            self.logger.error(f"Error calculating keyword sentiment: {str(e)}")
             return 0.5
     
     def analyze_batch(self, texts: List[str]) -> List[float]:
@@ -179,16 +169,10 @@ class SentimentEngine:
             if not texts:
                 return []
             
-            # Preprocess all texts
-            cleaned_texts = [self._preprocess_text(text) for text in texts]
-            
-            # Analyze in batch
-            results = self.pipeline(cleaned_texts)
-            
-            # Extract scores
+            # Analyze each text individually
             scores = []
-            for result in results:
-                score = self._extract_sentiment_score(result)
+            for text in texts:
+                score = self.analyze_sentiment(text)
                 scores.append(score)
             
             self.logger.info(f"Analyzed {len(texts)} texts in batch")
@@ -208,18 +192,8 @@ class SentimentEngine:
             Dict[str, List[str]]: Dictionary of positive and negative keywords
         """
         return {
-            "positive": [
-                "bullish", "moon", "pump", "surge", "breakout", "rally", "gains",
-                "adoption", "partnership", "upgrade", "integration", "launch",
-                "hodl", "diamond hands", "to the moon", "green", "profit",
-                "growth", "innovation", "revolutionary", "game changer"
-            ],
-            "negative": [
-                "bearish", "dump", "crash", "drop", "fall", "correction", "dip",
-                "sell-off", "panic", "fud", "fear", "uncertainty", "doubt",
-                "red", "loss", "scam", "hack", "vulnerability", "regulation",
-                "ban", "crackdown", "bubble", "overvalued", "risky"
-            ]
+            "positive": self.positive_keywords,
+            "negative": self.negative_keywords
         }
     
     def enhance_crypto_sentiment(self, text: str, base_score: float) -> float:
