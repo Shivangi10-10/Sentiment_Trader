@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime, timedelta
 import time
 import threading
@@ -24,7 +22,7 @@ if 'sentiment_data' not in st.session_state:
 if 'trading_history' not in st.session_state:
     st.session_state.trading_history = pd.DataFrame()
 if 'portfolio_balance' not in st.session_state:
-    st.session_state.portfolio_balance = {"APT": 0, "USDT": 1000}  # Starting with 1000 USDT
+    st.session_state.portfolio_balance = {"APT": 0.0, "USDT": 1000.0}  # Starting with 1000 USDT
 if 'last_update' not in st.session_state:
     st.session_state.last_update = None
 
@@ -173,29 +171,18 @@ if not st.session_state.sentiment_data.empty:
         sentiment_color = "🟢" if apt_sentiment > 0.6 else "🟡" if apt_sentiment > 0.4 else "🔴"
         st.metric("APT Sentiment", f"{sentiment_color} {apt_sentiment:.3f}")
         
-        # Sentiment gauge
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=apt_sentiment,
-            domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "APT Sentiment Score"},
-            gauge={
-                'axis': {'range': [None, 1]},
-                'bar': {'color': "darkblue"},
-                'steps': [
-                    {'range': [0, 0.3], 'color': "lightgray"},
-                    {'range': [0.3, 0.7], 'color': "gray"},
-                    {'range': [0.7, 1], 'color': "lightgreen"}
-                ],
-                'threshold': {
-                    'line': {'color': "red", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 0.7
-                }
-            }
-        ))
-        fig_gauge.update_layout(height=300)
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        # Sentiment progress bar
+        st.progress(apt_sentiment, text=f"APT Sentiment: {apt_sentiment:.3f}")
+        
+        # Color-coded sentiment display
+        if apt_sentiment > 0.7:
+            st.success(f"Strong Positive Sentiment: {apt_sentiment:.3f}")
+        elif apt_sentiment > 0.5:
+            st.info(f"Positive Sentiment: {apt_sentiment:.3f}")
+        elif apt_sentiment > 0.3:
+            st.warning(f"Negative Sentiment: {apt_sentiment:.3f}")
+        else:
+            st.error(f"Strong Negative Sentiment: {apt_sentiment:.3f}")
     
     with sentiment_display_cols[1]:
         usdt_sentiment = rolling_sentiment.get('USDT', 0.5)
@@ -227,38 +214,31 @@ if not st.session_state.sentiment_data.empty:
     df_plot['timestamp'] = pd.to_datetime(df_plot['timestamp'])
     df_plot = df_plot.sort_values('timestamp')
     
-    # Group by token and create rolling average
-    fig_trends = go.Figure()
-    
-    for token in df_plot['token'].unique():
-        token_data = df_plot[df_plot['token'] == token].copy()
-        if len(token_data) > 1:
-            # Calculate rolling average
-            token_data['rolling_sentiment'] = token_data['sentiment_score'].rolling(window=5, min_periods=1).mean()
-            
-            fig_trends.add_trace(go.Scatter(
-                x=token_data['timestamp'],
-                y=token_data['rolling_sentiment'],
-                mode='lines+markers',
-                name=f'{token} Sentiment',
-                line=dict(width=3)
-            ))
-    
-    # Add threshold lines
-    fig_trends.add_hline(y=buy_threshold, line_dash="dash", line_color="green", 
-                        annotation_text="Buy Threshold")
-    fig_trends.add_hline(y=sell_threshold, line_dash="dash", line_color="red", 
-                        annotation_text="Sell Threshold")
-    
-    fig_trends.update_layout(
-        title="Sentiment Score Trends (5-point Rolling Average)",
-        xaxis_title="Time",
-        yaxis_title="Sentiment Score",
-        height=400,
-        yaxis=dict(range=[0, 1])
-    )
-    
-    st.plotly_chart(fig_trends, use_container_width=True)
+    # Show recent sentiment data in table format
+    if len(df_plot) > 0:
+        # Calculate rolling average for each token
+        for token in df_plot['token'].unique():
+            token_data = df_plot[df_plot['token'] == token].copy()
+            if len(token_data) > 1:
+                token_data = token_data.sort_values('timestamp')
+                # Use pandas rolling average
+                token_data['rolling_sentiment'] = token_data['sentiment_score'].rolling(window=5, min_periods=1).mean()
+                
+                st.write(f"**{token} Recent Sentiment Trend:**")
+                
+                # Show last 10 data points
+                recent_data = token_data.tail(10)[['timestamp', 'sentiment_score', 'rolling_sentiment']]
+                recent_data['timestamp'] = recent_data['timestamp'].dt.strftime('%H:%M:%S')
+                recent_data['sentiment_score'] = recent_data['sentiment_score'].round(3)
+                recent_data['rolling_sentiment'] = recent_data['rolling_sentiment'].round(3)
+                
+                st.dataframe(recent_data, use_container_width=True)
+                
+                # Simple line chart using Streamlit's built-in charting
+                chart_data = token_data.set_index('timestamp')[['sentiment_score', 'rolling_sentiment']]
+                st.line_chart(chart_data)
+    else:
+        st.info("No sentiment trend data available yet.")
 
 else:
     st.info("No sentiment data available. Click 'Refresh Data Now' to fetch the latest information.")
@@ -286,30 +266,24 @@ if not st.session_state.trading_history.empty:
         st.subheader("📊 Portfolio Performance")
         
         # Calculate cumulative performance
-        trades_df['cumulative_value'] = 0
-        running_balance = {"APT": 0, "USDT": 1000}
+        trades_df['cumulative_value'] = 0.0
+        running_balance = {"APT": 0.0, "USDT": 1000.0}
         
         for idx, trade in trades_df.iterrows():
             if trade['action'] == 'BUY':
-                running_balance['USDT'] -= trade['amount'] * trade['price']
-                running_balance['APT'] += trade['amount']
+                running_balance['USDT'] -= float(trade['amount']) * float(trade['price'])
+                running_balance['APT'] += float(trade['amount'])
             elif trade['action'] == 'SELL':
-                running_balance['USDT'] += trade['amount'] * trade['price']
-                running_balance['APT'] -= trade['amount']
+                running_balance['USDT'] += float(trade['amount']) * float(trade['price'])
+                running_balance['APT'] -= float(trade['amount'])
             
             # Calculate total value
-            total_value = running_balance['APT'] * trade['price'] + running_balance['USDT']
+            total_value = running_balance['APT'] * float(trade['price']) + running_balance['USDT']
             trades_df.at[idx, 'cumulative_value'] = total_value
         
-        fig_performance = px.line(
-            trades_df.sort_values('timestamp'), 
-            x='timestamp', 
-            y='cumulative_value',
-            title='Portfolio Value Over Time',
-            labels={'cumulative_value': 'Portfolio Value (USDT)', 'timestamp': 'Time'}
-        )
-        fig_performance.update_layout(height=400)
-        st.plotly_chart(fig_performance, use_container_width=True)
+        # Use Streamlit's built-in line chart
+        performance_data = trades_df.sort_values('timestamp').set_index('timestamp')[['cumulative_value']]
+        st.line_chart(performance_data)
 
 else:
     st.info("No trading history available. Trading decisions will appear here once auto-trading is enabled.")
