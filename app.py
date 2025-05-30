@@ -11,8 +11,8 @@ from backtesting_engine import BacktestingEngine
 
 # Page configuration
 st.set_page_config(
-    page_title="Sentiment Sage - AI Trading Agent",
-    page_icon="🧠",
+    page_title="Sentiment Sage - Trading Agent",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -38,15 +38,140 @@ def initialize_components():
 
 sentiment_engine, data_sources, trading_agent, backtesting_engine = initialize_components()
 
-# Sidebar
-st.sidebar.title("🧠 Sentiment Sage")
-st.sidebar.markdown("AI-Powered Crypto Trading Agent")
-
-# Trading settings
-st.sidebar.subheader("Trading Settings")
-buy_threshold = st.sidebar.slider("Buy Threshold", 0.0, 1.0, 0.7, 0.05)
-sell_threshold = st.sidebar.slider("Sell Threshold", 0.0, 1.0, 0.3, 0.05)
-trading_enabled = st.sidebar.checkbox("Enable Auto Trading", value=True)
+# Enhanced Professional Sidebar
+with st.sidebar:
+    # Sidebar Header with Professional Styling
+    st.markdown("""
+    <style>
+        .sidebar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: white;
+        }
+        .sidebar-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #667eea;
+        }
+        .sidebar-metric {
+            background: white;
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #48bb78; }
+        .status-inactive { background-color: #e53e3e; }
+    </style>
+    
+    <div class="sidebar-header">
+        <h2 style="margin: 0; font-size: 1.4rem;">📈 Sentiment Sage</h2>
+        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">Advanced Trading Control</p>
+        <p style="margin: 0.3rem 0 0 0; opacity: 0.8; font-size: 0.8rem;">Made by Shivangi Suyash</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Trading Status Overview
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**📊 System Status**")
+    
+    # Data source status
+    data_status = data_sources.get_data_sources_status()
+    api_status = "🟢 Connected" if data_status.get('cryptopanic', False) else "🔴 Disconnected"
+    st.markdown(f"**API Status:** {api_status}")
+    st.markdown(f"**Data Points:** {len(st.session_state.sentiment_data)}")
+    st.markdown(f"**Active Trades:** {len(st.session_state.trading_history)}")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Trading Parameters Section
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**🎯 Trading Parameters**")
+    buy_threshold = st.slider("Buy Signal Threshold", 0.0, 1.0, 0.65, 0.05, 
+                             help="Sentiment score threshold for buy signals (higher = more conservative)")
+    sell_threshold = st.slider("Sell Signal Threshold", 0.0, 1.0, 0.35, 0.05,
+                              help="Sentiment score threshold for sell signals (lower = more conservative)")
+    
+    # Visual threshold indicator
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, #e53e3e 0%, #ed8936 {sell_threshold*100}%, #ecc94b {(sell_threshold+buy_threshold)*50}%, #68d391 {buy_threshold*100}%, #38a169 100%); 
+                height: 10px; border-radius: 5px; margin: 10px 0;"></div>
+    <div style="font-size: 0.8rem; color: #666;">
+        Sell Zone ← Neutral Zone → Buy Zone
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Risk Management Section
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**🛡️ Risk Management**")
+    risk_level = st.selectbox("Risk Profile", ["Conservative", "Moderate", "Aggressive"],
+                             help="Conservative: Small positions, Moderate: Balanced, Aggressive: Large positions")
+    
+    risk_colors = {"Conservative": "#48bb78", "Moderate": "#ed8936", "Aggressive": "#e53e3e"}
+    st.markdown(f'<div style="color: {risk_colors[risk_level]}; font-weight: bold;">Current: {risk_level}</div>', unsafe_allow_html=True)
+    
+    stop_loss_enabled = st.checkbox("Enable Stop Loss Protection", value=True,
+                                   help="Automatically sell positions to limit losses")
+    
+    if stop_loss_enabled:
+        stop_loss_percentage = st.slider("Stop Loss Percentage", 1.0, 20.0, 5.0, 0.5,
+                                        help="Maximum loss percentage before auto-sell")
+        st.markdown(f'<div style="color: #e53e3e; font-size: 0.9rem;">Max Loss: -{stop_loss_percentage}%</div>', unsafe_allow_html=True)
+    else:
+        stop_loss_percentage = 0.0
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # System Settings Section
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**🔄 System Settings**")
+    auto_refresh = st.checkbox("Auto-Refresh Data", value=False,
+                              help="Automatically fetch new data every 30 seconds")
+    
+    if auto_refresh:
+        st.markdown('<div style="color: #48bb78; font-size: 0.9rem;">⏱️ Refreshing every 30 seconds</div>', unsafe_allow_html=True)
+    
+    # Manual refresh button
+    if st.button("🔄 Refresh Data Now", type="secondary", use_container_width=True):
+        st.session_state.last_update = datetime.now()
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Trading Control Section
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**🚀 Trading Control**")
+    trading_enabled = st.toggle("Enable Automated Trading", value=False,
+                               help="Activate sentiment-based automated trading")
+    
+    status_class = "status-active" if trading_enabled else "status-inactive"
+    status_text = "ACTIVE" if trading_enabled else "INACTIVE"
+    st.markdown(f'<div><span class="status-indicator {status_class}"></span>Status: {status_text}</div>', unsafe_allow_html=True)
+    
+    if trading_enabled:
+        st.markdown('<div style="color: #48bb78; font-size: 0.9rem;">🤖 Agent is monitoring markets</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="color: #e53e3e; font-size: 0.9rem;">⏸️ Trading is paused</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Quick Actions Section
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("**⚡ Quick Actions**")
+    
+    if st.button("⚠️ Emergency Stop", type="primary", use_container_width=True):
+        st.session_state.trading_enabled = False
+        st.warning("Trading has been stopped!")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Advanced features
 st.sidebar.subheader("Advanced Features")
@@ -408,13 +533,13 @@ st.markdown("""
 </style>
 
 <div class="hero-section">
-    <h1 class="hero-title">🧠 Sentiment Sage</h1>
-    <p class="hero-subtitle">Advanced AI-Powered Cryptocurrency Trading Agent</p>
+    <h1 class="hero-title">📈 Sentiment Sage</h1>
+    <p class="hero-subtitle">Advanced Cryptocurrency Trading Agent by Shivangi Suyash</p>
     <div class="hero-badges">
         <span class="badge">🔴 Live Data</span>
-        <span class="badge">🤖 AI Powered</span>
         <span class="badge">📊 Real-time Analysis</span>
         <span class="badge">⚡ Automated Trading</span>
+        <span class="badge">🎯 Smart Decisions</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -821,9 +946,9 @@ with tab3:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 10px; margin-top: 2rem;'>
-    <h4>🧠 Sentiment Sage Trading Agent</h4>
-    <p><strong>Built for Aptos Thunderdome Hackathon</strong></p>
+    <h4>📈 Sentiment Sage Trading Agent</h4>
+    <p><strong>Created by Shivangi Suyash for Aptos Thunderdome Hackathon</strong></p>
     <p>Real-time cryptocurrency sentiment analysis powered by authentic news data from CryptoPanic API</p>
-    <p>Features: AI sentiment analysis • FUD detection • Multi-token portfolio • Risk management • Backtesting</p>
+    <p>Features: Sentiment analysis • FUD detection • Multi-token portfolio • Risk management • Backtesting</p>
 </div>
 """, unsafe_allow_html=True)
