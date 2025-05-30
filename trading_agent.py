@@ -95,7 +95,9 @@ class TradingAgent:
             return {"APT": 0.5, "USDT": 0.5}
     
     def make_trading_decision(self, sentiment_scores: Dict[str, float], 
-                            buy_threshold: float, sell_threshold: float) -> Dict[str, Any]:
+                            buy_threshold: float, sell_threshold: float,
+                            risk_level: str = "Moderate", stop_loss_enabled: bool = True,
+                            stop_loss_percentage: float = 5.0) -> Dict[str, Any]:
         """
         Make trading decision based on sentiment scores and thresholds.
         

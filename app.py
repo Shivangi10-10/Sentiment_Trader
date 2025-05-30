@@ -7,6 +7,7 @@ from sentiment_engine import SentimentEngine
 from data_sources import DataSources
 from trading_agent import TradingAgent
 from utils import Utils
+from backtesting_engine import BacktestingEngine
 
 # Page configuration
 st.set_page_config(
@@ -32,9 +33,10 @@ def initialize_components():
     sentiment_engine = SentimentEngine()
     data_sources = DataSources()
     trading_agent = TradingAgent()
-    return sentiment_engine, data_sources, trading_agent
+    backtesting_engine = BacktestingEngine()
+    return sentiment_engine, data_sources, trading_agent, backtesting_engine
 
-sentiment_engine, data_sources, trading_agent = initialize_components()
+sentiment_engine, data_sources, trading_agent, backtesting_engine = initialize_components()
 
 # Sidebar
 st.sidebar.title("🧠 Sentiment Sage")
@@ -46,6 +48,25 @@ buy_threshold = st.sidebar.slider("Buy Threshold", 0.0, 1.0, 0.7, 0.05)
 sell_threshold = st.sidebar.slider("Sell Threshold", 0.0, 1.0, 0.3, 0.05)
 trading_enabled = st.sidebar.checkbox("Enable Auto Trading", value=True)
 
+# Advanced features
+st.sidebar.subheader("Advanced Features")
+risk_level = st.sidebar.selectbox("Risk Level", ["Conservative", "Moderate", "Aggressive"], index=1)
+stop_loss_enabled = st.sidebar.checkbox("Enable Stop Loss", value=True)
+stop_loss_percentage = st.sidebar.slider("Stop Loss %", 1.0, 10.0, 5.0, 0.5)
+
+# Multi-token support
+st.sidebar.subheader("Multi-Token Portfolio")
+tokens_to_track = st.sidebar.multiselect(
+    "Tokens to Track", 
+    ["APT", "BTC", "ETH", "USDT"], 
+    default=["APT"]
+)
+
+# Sentiment filtering
+st.sidebar.subheader("Sentiment Filtering")
+fud_detection = st.sidebar.checkbox("Enable FUD Detection", value=True)
+min_sentiment_confidence = st.sidebar.slider("Min Sentiment Confidence", 0.1, 0.9, 0.3, 0.1)
+
 # Data refresh controls
 st.sidebar.subheader("Data Controls")
 if st.sidebar.button("Refresh Data Now"):
@@ -54,19 +75,33 @@ if st.sidebar.button("Refresh Data Now"):
         news_data = data_sources.fetch_crypto_news()
         social_data = data_sources.fetch_social_media_data()
         
-        # Analyze sentiment
+        # Analyze sentiment with FUD detection
         all_data = news_data + social_data
         sentiment_scores = []
         
         for item in all_data:
+            # Analyze sentiment
             score = sentiment_engine.analyze_sentiment(item['text'])
-            sentiment_scores.append({
-                'timestamp': item['timestamp'],
-                'text': item['text'][:100] + "..." if len(item['text']) > 100 else item['text'],
-                'source': item['source'],
-                'sentiment_score': score,
-                'token': item.get('token', 'APT')
-            })
+            
+            # FUD detection if enabled
+            fud_result = None
+            if fud_detection:
+                fud_result = sentiment_engine.detect_fud(item['text'])
+                # Adjust sentiment if suspicious content detected
+                if fud_result['is_suspicious']:
+                    score = max(0.2, score * 0.7)  # Reduce sentiment for suspicious content
+            
+            # Only include if sentiment confidence is above minimum threshold
+            if abs(score - 0.5) >= (min_sentiment_confidence - 0.5):
+                sentiment_scores.append({
+                    'timestamp': item['timestamp'],
+                    'text': item['text'][:100] + "..." if len(item['text']) > 100 else item['text'],
+                    'source': item['source'],
+                    'sentiment_score': score,
+                    'token': item.get('token', 'APT'),
+                    'fud_detected': fud_result['is_suspicious'] if fud_result else False,
+                    'manipulation_score': fud_result['manipulation_score'] if fud_result else 0.0
+                })
         
         # Update session state
         new_data = pd.DataFrame(sentiment_scores)
@@ -120,24 +155,28 @@ if auto_refresh:
 st.title("🧠 Sentiment Sage - AI Trading Agent")
 st.markdown("**Real-time sentiment analysis and automated trading for Aptos ecosystem**")
 
-# Status indicators
-col1, col2, col3, col4 = st.columns(4)
+# Create tabs for different sections
+tab1, tab2, tab3 = st.tabs(["Live Trading", "Backtesting", "Advanced Analytics"])
 
-with col1:
-    st.metric("Trading Status", "🟢 Active" if trading_enabled else "🔴 Disabled")
-
-with col2:
-    if st.session_state.last_update:
-        time_diff = datetime.now() - st.session_state.last_update
-        st.metric("Last Update", f"{time_diff.seconds//60}m ago")
-    else:
-        st.metric("Last Update", "Never")
-
-with col3:
-    st.metric("Data Points", len(st.session_state.sentiment_data))
-
-with col4:
-    st.metric("Total Trades", len(st.session_state.trading_history))
+with tab1:
+    # Status indicators
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Trading Status", "🟢 Active" if trading_enabled else "🔴 Disabled")
+    
+    with col2:
+        if st.session_state.last_update:
+            time_diff = datetime.now() - st.session_state.last_update
+            st.metric("Last Update", f"{time_diff.seconds//60}m ago")
+        else:
+            st.metric("Last Update", "Never")
+    
+    with col3:
+        st.metric("Data Points", len(st.session_state.sentiment_data))
+    
+    with col4:
+        st.metric("Total Trades", len(st.session_state.trading_history))
 
 # Portfolio overview
 st.subheader("💰 Portfolio Balance")

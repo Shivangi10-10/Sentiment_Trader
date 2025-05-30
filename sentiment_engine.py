@@ -244,3 +244,55 @@ class SentimentEngine:
         enhanced_score = self.enhance_crypto_sentiment(text, base_score)
         
         return enhanced_score
+    
+    def detect_fud(self, text: str) -> Dict[str, Any]:
+        """
+        Detect potential FUD (Fear, Uncertainty, Doubt) in text.
+        
+        Args:
+            text (str): Text to analyze
+            
+        Returns:
+            Dict[str, Any]: FUD detection results
+        """
+        try:
+            text_lower = text.lower()
+            
+            # FUD indicators
+            fud_keywords = [
+                'scam', 'fraud', 'ponzi', 'crash imminent', 'going to zero',
+                'rug pull', 'exit scam', 'dump incoming', 'sell everything',
+                'dead coin', 'worthless', 'bubble burst', 'panic sell'
+            ]
+            
+            # Pump indicators
+            pump_keywords = [
+                'moon soon', 'guaranteed profit', '100x guaranteed', 'easy money',
+                'get rich quick', 'insider info', 'pump incoming', 'buy now or cry later'
+            ]
+            
+            fud_count = sum(1 for keyword in fud_keywords if keyword in text_lower)
+            pump_count = sum(1 for keyword in pump_keywords if keyword in text_lower)
+            
+            # Calculate manipulation score
+            manipulation_score = (fud_count + pump_count) / max(1, len(text.split()) / 10)
+            
+            is_suspicious = manipulation_score > 0.3 or fud_count >= 2 or pump_count >= 2
+            
+            return {
+                'is_suspicious': is_suspicious,
+                'fud_score': fud_count,
+                'pump_score': pump_count,
+                'manipulation_score': manipulation_score,
+                'reason': 'High manipulation indicators detected' if is_suspicious else 'Clean content'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error detecting FUD: {str(e)}")
+            return {
+                'is_suspicious': False,
+                'fud_score': 0,
+                'pump_score': 0,
+                'manipulation_score': 0.0,
+                'reason': 'Analysis failed'
+            }
