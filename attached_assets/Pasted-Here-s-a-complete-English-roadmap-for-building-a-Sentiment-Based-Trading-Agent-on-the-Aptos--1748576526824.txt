@@ -1,0 +1,152 @@
+Here’s a complete **English roadmap** for building a **Sentiment-Based Trading Agent** on the Aptos blockchain for the Thunderdome hackathon:
+
+---
+
+# 🧠 Project Name: **Sentiment Sage – AI-Powered Crypto Trader**
+
+## 🌟 Goal:
+
+Build an AI agent that analyzes crypto-related news/social media for **sentiment trends** and automatically **executes trades** on the Aptos blockchain based on that sentiment.
+
+---
+
+## 🗺️ ROADMAP
+
+---
+
+### ✅ **Phase 1: Ideation & Setup (Week 1)**
+
+**Objective:** Finalize concept and prepare environment
+
+* 📌 Define scope:
+
+  * Track sentiment for 1–2 Aptos-related tokens (e.g., APT, USDT on Aptos)
+  * Trade based on sentiment spikes or dips
+
+* ⚙️ Tools Setup:
+
+  * Register for Hackathon + join [Telegram](https://t.me/+IPhkTL9iVZo4N2Mx)
+  * Set up:
+
+    * Aptos dev environment (Move CLI or Aptos SDK)
+    * Python (for scraping + AI model)
+    * Google Cloud BigQuery (optional, for onchain data)
+    * GitHub repo
+
+---
+
+### 🔍 **Phase 2: Sentiment Engine (Week 2)**
+
+**Objective:** Build a working pipeline that fetches data and analyzes sentiment
+
+* 📰 Data sources:
+
+  * Crypto Twitter (via Twitter API or scraping)
+  * News APIs (e.g., CryptoPanic, Cointelegraph RSS)
+  * Reddit (optional: /r/aptos)
+
+* 🧠 Sentiment analysis:
+
+  * Use HuggingFace transformer models (e.g., `distilbert-base-uncased-finetuned-sst-2-english`)
+  * Classify into: Positive / Neutral / Negative
+  * Track sentiment trend over time (rolling average)
+
+* 🧪 Output:
+
+  * "Sentiment Score" for each token every hour
+  * Threshold logic: e.g., Buy if sentiment > 0.7, Sell if < 0.3
+
+---
+
+### ⚙️ **Phase 3: Agent Logic + Execution (Week 3)**
+
+**Objective:** Connect sentiment signal to on-chain trading
+
+* 🧠 Agent Workflow:
+
+  1. Pull sentiment data hourly
+  2. Decide to buy/sell/hold based on strategy
+  3. Interact with Aptos smart contract to trade
+
+* 🔗 Aptos Blockchain:
+
+  * Use **Move** or Aptos SDK to interact with DEX (like Econia or Pontem)
+  * Test on Aptos testnet
+  * Deploy simple wallet + trading logic agent
+
+* 🧠 Optional Enhancements:
+
+  * Use **Allora** as predictive oracle to feed into strategy
+  * Use **Marlin Oyster** for off-chain AI model inference securely
+
+---
+
+### 🎛️ **Phase 4: UI + Testing (Week 4)**
+
+**Objective:** Polish, test, and prepare for submission
+
+* 🧪 Testing:
+
+  * Run sentiment detection + trade simulations
+  * Ensure trade logic handles errors (e.g., bad API data, no liquidity)
+
+* 💻 Optional Dashboard:
+
+  * Simple frontend showing:
+
+    * Token sentiment graph
+    * Recent trades made by agent
+    * Wallet balance
+
+* 📦 Package for Demo:
+
+  * GitHub repo with:
+
+    * Code
+    * README
+    * Setup guide
+  * 2-min video walkthrough (highly recommended)
+
+---
+
+### 🎤 **Demo Day (June 2)**
+
+**Objective:** Present clearly, show impact
+
+* 5 min pitch should cover:
+
+  * What the agent does (sentiment-based trader)
+  * How it works (data → sentiment → action → trade)
+  * Tools used (e.g., HuggingFace, Aptos, Allora, Google Cloud)
+  * Demo of agent in action
+  * Impact + future scope
+
+---
+
+## 🧰 Tools & Tech Stack
+
+| Layer               | Tool                                     |
+| ------------------- | ---------------------------------------- |
+| Language            | Python (sentiment engine) + Move (Aptos) |
+| Blockchain          | Aptos                                    |
+| AI/ML               | HuggingFace Transformers                 |
+| Infra               | Google Cloud BigQuery, Marlin (optional) |
+| Oracle              | Allora (optional predictive feed)        |
+| Data                | Twitter API, CryptoPanic, RSS            |
+| Frontend (Optional) | React / Streamlit                        |
+
+---
+
+## 🏁 End Result
+
+* A fully autonomous AI agent that reads the crypto room's mood and makes onchain trades on Aptos based on it — with AI-powered intuition and blockchain precision.
+
+---
+
+Would you like help with the code structure or specific module like:
+
+* Sentiment model setup
+* Aptos trading script
+* Connecting it all together?
+
+Let me know and I’ll dive in.
