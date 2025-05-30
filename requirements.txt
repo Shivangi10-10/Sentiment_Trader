@@ -1,6 +1,14 @@
-streamlit
+streamlit==1.35.0
 pandas
 numpy
 requests
 transformers
-...
+torch
+tqdm
+scikit-learn
+flask
+beautifulsoup4
+lxml
+html5lib
+openai
+python-dotenv
